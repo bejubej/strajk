@@ -506,21 +506,21 @@
   }
   function todayStr() { return fmt(new Date()); }
 
-  async function load() {
-    try {
-      const res = await window.storage.get(STORAGE_KEY, false);
-      if (res && res.value) {
-        doneDays = new Set(JSON.parse(res.value));
-      }
-    } catch (e) { /* no data yet */ }
-    render();
-  }
+ async function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      doneDays = new Set(JSON.parse(raw));
+    }
+  } catch (e) { /* brak danych albo localStorage niedostępny */ }
+  render();
+}
 
-  async function save() {
-    try {
-      await window.storage.set(STORAGE_KEY, JSON.stringify([...doneDays]), false);
-    } catch (e) { console.error('save failed', e); }
-  }
+async function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...doneDays]));
+  } catch (e) { console.error('save failed', e); }
+}
 
   function isWeekend(d) {
     const wd = d.getDay();
