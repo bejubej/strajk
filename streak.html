@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seria</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0E0B12;
+    --surface: #1C1622;
+    --surface-hi: #271E2E;
+    --flame1: #FF6B35;
+    --flame2: #FFC145;
+    --hot: #FF3D6E;
+    --text: #F5F1E8;
+    --text-dim: #9A8FA8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    height: 100%;
+    overflow-x: hidden;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 20px 60px;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  .app-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+    margin-bottom: 28px;
+  }
+
+  /* HERO STREAK */
+  .hero {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 36px;
+  }
+  .flame-wrap {
+    font-size: 54px;
+    line-height: 1;
+    margin-bottom: 6px;
+    filter: drop-shadow(0 0 20px rgba(255,107,53,0.5));
+    transition: transform 0.25s cubic-bezier(.34,1.56,.64,1);
+  }
+  .flame-wrap.bump { transform: scale(1.25) rotate(-4deg); }
+
+  .streak-num {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 88px;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--flame2), var(--flame1) 60%, var(--hot));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
+  }
+  .streak-num.pop { transform: scale(1.15); }
+
+  .streak-label {
+    font-size: 15px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    letter-spacing: 0.01em;
+  }
+
+  .microcopy {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-top: 10px;
+    height: 20px;
+    text-align: center;
+    transition: opacity 0.3s ease;
+  }
+
+  /* CALENDAR */
+  .cal-card {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 22px 18px 26px;
+    width: 100%;
+    max-width: 380px;
+  }
+  .cal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .cal-header .month {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+  }
+  .nav-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 18px;
+    padding: 6px 10px;
+    cursor: pointer;
+    border-radius: 8px;
+  }
+  .nav-btn:hover { background: var(--surface-hi); color: var(--text); }
+
+  .weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 8px;
+  }
+  .weekdays span {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: lowercase;
+  }
+
+  .days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+
+  .day {
+    position: relative;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    background: var(--surface-hi);
+    color: var(--text-dim);
+    border: none;
+    transition: transform 0.12s ease, background 0.2s ease, color 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .day.future { opacity: 0.3; cursor: default; }
+  .day.today { box-shadow: inset 0 0 0 2px rgba(255,193,69,0.6); }
+  .day.empty { visibility: hidden; cursor: default; }
+  .day.weekend { opacity: 0.22; cursor: default; background: transparent; }
+  .day:active:not(.future):not(.empty):not(.weekend) { transform: scale(0.88); }
+
+  .day.done {
+    background: linear-gradient(135deg, var(--flame2), var(--flame1));
+    color: #1a0f08;
+    font-weight: 700;
+  }
+  .day.done.just-set {
+    animation: dayPop 0.45s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes dayPop {
+    0% { transform: scale(1); }
+    35% { transform: scale(1.35) rotate(-6deg); }
+    60% { transform: scale(0.92); }
+    100% { transform: scale(1); }
+  }
+
+  /* particle burst */
+  .particle {
+    position: fixed;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* milestone celebration */
+  .celebration-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0;
+  }
+  .celebration-overlay.show {
+    opacity: 1;
+    animation: fadeOut 1.8s ease forwards;
+  }
+  @keyframes fadeOut {
+    0% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  .celebration-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 30px;
+    text-align: center;
+    background: linear-gradient(135deg, var(--flame2), var(--hot));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    transform: scale(0.5);
+    animation: milestonePop 0.6s cubic-bezier(.34,1.56,.64,1) forwards;
+  }
+  @keyframes milestonePop {
+    0% { transform: scale(0.3) rotate(-8deg); }
+    60% { transform: scale(1.15) rotate(3deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+  .confetti {
+    position: fixed;
+    top: -20px;
+    width: 8px;
+    height: 14px;
+    z-index: 999;
+    pointer-events: none;
+  }
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(540deg); opacity: 0; }
+  }
+
+  /* STATS */
+  .stats-card {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+    max-width: 380px;
+    margin-top: 14px;
+  }
+  .stat-tile {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 16px 8px;
+    text-align: center;
+    position: relative;
+    transition: transform 0.2s cubic-bezier(.34,1.56,.64,1);
+  }
+  .stat-tile.record-live {
+    background: linear-gradient(160deg, var(--surface), #2A1E1A);
+    box-shadow: inset 0 0 0 1.5px rgba(255,193,69,0.35);
+  }
+  .stat-tile.bump {
+    transform: scale(1.08);
+  }
+  .stat-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 26px;
+    line-height: 1.1;
+  }
+  .stat-tile.record-live .stat-value {
+    background: linear-gradient(135deg, var(--flame2), var(--flame1));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .stat-tag {
+    font-size: 10.5px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    letter-spacing: 0.01em;
+  }
+  .stat-trophy {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-size: 11px;
+  }
+
+  /* XP / LEVEL */
+  .xp-row {
+    width: 100%;
+    max-width: 220px;
+    margin-top: 16px;
+  }
+  .xp-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: var(--text-dim);
+    margin-bottom: 5px;
+  }
+  .xp-label #levelText {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .xp-bar-wrap {
+    width: 100%;
+    height: 7px;
+    border-radius: 5px;
+    background: var(--surface-hi);
+    overflow: hidden;
+  }
+  .xp-bar-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 5px;
+    background: linear-gradient(90deg, var(--flame2), var(--hot));
+    transition: width 0.45s cubic-bezier(.34,1.2,.64,1);
+  }
+
+  /* WEEK PROGRESS */
+  .week-card {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 16px 18px;
+    width: 100%;
+    max-width: 380px;
+    margin-top: 14px;
+  }
+  .week-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+  .week-card-header span:first-child {
+    text-transform: lowercase;
+  }
+  .week-card-header #weekCountText {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    color: var(--text);
+    font-size: 13px;
+  }
+  .week-segments {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+  .week-segment {
+    height: 10px;
+    border-radius: 6px;
+    background: var(--surface-hi);
+    transition: background 0.3s ease, transform 0.3s cubic-bezier(.34,1.56,.64,1);
+  }
+  .week-segment.is-today {
+    box-shadow: inset 0 0 0 1.5px rgba(255,193,69,0.5);
+  }
+  .week-segment.filled {
+    background: linear-gradient(90deg, var(--flame2), var(--flame1));
+  }
+
+  /* BADGES */
+  .badges-card {
+    width: 100%;
+    max-width: 380px;
+    margin-top: 14px;
+  }
+  .badges-title {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    padding-left: 2px;
+  }
+  .badges-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .badge-tile {
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 12px 4px 10px;
+    text-align: center;
+    opacity: 0.45;
+    transition: transform 0.3s cubic-bezier(.34,1.56,.64,1), opacity 0.3s ease;
+  }
+  .badge-tile.unlocked {
+    opacity: 1;
+    background: linear-gradient(160deg, var(--surface), #2A1E1A);
+    box-shadow: inset 0 0 0 1px rgba(255,193,69,0.3);
+  }
+  .badge-tile.just-unlocked {
+    animation: dayPop 0.5s cubic-bezier(.34,1.56,.64,1);
+  }
+  .badge-icon {
+    font-size: 22px;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .badge-name {
+    font-size: 9px;
+    color: var(--text-dim);
+    line-height: 1.25;
+  }
+  .badge-tile.unlocked .badge-name {
+    color: var(--text);
+  }
+
+  .celebration-text.multiline {
+    max-width: 280px;
+    font-size: 24px;
+    line-height: 1.3;
+  }
+
+  .reset-link {
+    margin-top: 26px;
+    font-size: 12px;
+    color: var(--text-dim);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-name">seria</div>
+
+<div class="hero">
+  <div class="flame-wrap" id="flameWrap">🔥</div>
+  <div class="streak-num" id="streakNum">0</div>
+  <div class="streak-label" id="streakLabel">dni z rzędu</div>
+  <div class="microcopy" id="microcopy">zaznacz dziś, żeby zacząć</div>
+  <div class="xp-row">
+    <div class="xp-label">
+      <span id="levelText">Poziom 1</span>
+      <span id="xpText">0/50 XP</span>
+    </div>
+    <div class="xp-bar-wrap"><div class="xp-bar-fill" id="xpBarFill"></div></div>
+  </div>
+</div>
+
+<div class="week-card">
+  <div class="week-card-header">
+    <span>ten tydzień</span>
+    <span id="weekCountText">0/5</span>
+  </div>
+  <div class="week-segments" id="weekSegments"></div>
+</div>
+
+<div class="cal-card">
+  <div class="cal-header">
+    <button class="nav-btn" id="prevMonth">‹</button>
+    <div class="month" id="monthLabel"></div>
+    <button class="nav-btn" id="nextMonth">›</button>
+  </div>
+  <div class="weekdays">
+    <span>pn</span><span>wt</span><span>śr</span><span>cz</span><span>pt</span><span>sb</span><span>nd</span>
+  </div>
+  <div class="days" id="daysGrid"></div>
+</div>
+
+<div class="stats-card">
+  <div class="stat-tile" id="tileRecord">
+    <span class="stat-trophy" id="recordTrophy"></span>
+    <div class="stat-value" id="statRecord">0</div>
+    <div class="stat-tag">rekord</div>
+  </div>
+  <div class="stat-tile" id="tileTotal">
+    <div class="stat-value" id="statTotal">0</div>
+    <div class="stat-tag">łącznie dni</div>
+  </div>
+  <div class="stat-tile" id="tileMonth">
+    <div class="stat-value" id="statMonth">0</div>
+    <div class="stat-tag">ten miesiąc</div>
+  </div>
+</div>
+
+<div class="badges-card">
+  <div class="badges-title">odznaki</div>
+  <div class="badges-grid" id="badgesGrid"></div>
+</div>
+
+<button class="reset-link" id="resetBtn">wyczyść wszystko</button>
+
+<script>
+(function() {
+  const STORAGE_KEY = 'streak-days';
+  let doneDays = new Set(); // 'YYYY-MM-DD'
+  let viewDate = new Date();
+  viewDate.setDate(1);
+
+  const daysGrid = document.getElementById('daysGrid');
+  const monthLabel = document.getElementById('monthLabel');
+  const streakNum = document.getElementById('streakNum');
+  const streakLabel = document.getElementById('streakLabel');
+  const flameWrap = document.getElementById('flameWrap');
+  const microcopy = document.getElementById('microcopy');
+
+  const monthNames = ['styczeń','luty','marzec','kwiecień','maj','czerwiec','lipiec','sierpień','wrzesień','październik','listopad','grudzień'];
+
+  function fmt(d) {
+    const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  }
+  function todayStr() { return fmt(new Date()); }
+
+  async function load() {
+    try {
+      const res = await window.storage.get(STORAGE_KEY, false);
+      if (res && res.value) {
+        doneDays = new Set(JSON.parse(res.value));
+      }
+    } catch (e) { /* no data yet */ }
+    render();
+  }
+
+  async function save() {
+    try {
+      await window.storage.set(STORAGE_KEY, JSON.stringify([...doneDays]), false);
+    } catch (e) { console.error('save failed', e); }
+  }
+
+  function isWeekend(d) {
+    const wd = d.getDay();
+    return wd === 0 || wd === 6;
+  }
+  function prevWeekday(d) {
+    const c = new Date(d);
+    c.setDate(c.getDate() - 1);
+    while (isWeekend(c)) c.setDate(c.getDate() - 1);
+    return c;
+  }
+
+  function calcStreak() {
+    // only Mon-Fri count. Weekends are skipped and never break the streak.
+    const today = new Date();
+    let cursor;
+    if (isWeekend(today)) {
+      // roll back to the most recent Friday; if that's not done, streak is genuinely over
+      cursor = new Date(today);
+      while (isWeekend(cursor)) cursor.setDate(cursor.getDate() - 1);
+    } else if (doneDays.has(fmt(today))) {
+      cursor = today;
+    } else {
+      // today (a weekday) not done yet - grace period, check from the previous weekday
+      cursor = prevWeekday(today);
+    }
+    let count = 0;
+    while (doneDays.has(fmt(cursor))) {
+      count++;
+      cursor = prevWeekday(cursor);
+    }
+    return count;
+  }
+
+  const microcopyMap = [
+    [0, 'zaznacz dziś, żeby zacząć'],
+    [1, 'dobry początek'],
+    [5, 'pierwszy tydzień roboczy zaliczony'],
+    [10, 'dwa tygodnie robocze z rzędu'],
+    [15, 'trzy tygodnie. wchodzi w nawyk'],
+    [20, 'miesiąc roboczy non-stop'],
+    [30, 'to już charakter, nie przypadek'],
+    [50, 'nie do zatrzymania'],
+    [100, 'setka. legenda.'],
+  ];
+  function getMicrocopy(streak) {
+    let msg = microcopyMap[0][1];
+    for (const [thr, text] of microcopyMap) {
+      if (streak >= thr) msg = text;
+    }
+    return msg;
+  }
+
+  function updateStreakDisplay(animate) {
+    const streak = calcStreak();
+    streakNum.textContent = streak;
+    streakLabel.textContent = streak === 1 ? 'dzień z rzędu' : 'dni z rzędu';
+    microcopy.textContent = getMicrocopy(streak);
+    if (animate) {
+      streakNum.classList.remove('pop');
+      flameWrap.classList.remove('bump');
+      void streakNum.offsetWidth;
+      streakNum.classList.add('pop');
+      flameWrap.classList.add('bump');
+      setTimeout(() => {
+        streakNum.classList.remove('pop');
+        flameWrap.classList.remove('bump');
+      }, 300);
+    }
+    return streak;
+  }
+
+  function nextWeekday(d) {
+    const c = new Date(d);
+    c.setDate(c.getDate() + 1);
+    while (isWeekend(c)) c.setDate(c.getDate() + 1);
+    return c;
+  }
+
+  function calcLongestStreak() {
+    if (doneDays.size === 0) return 0;
+    const dates = [...doneDays].sort();
+    let longest = 1, current = 1;
+    for (let i = 1; i < dates.length; i++) {
+      const expectedNext = fmt(nextWeekday(new Date(dates[i - 1])));
+      current = (dates[i] === expectedNext) ? current + 1 : 1;
+      if (current > longest) longest = current;
+    }
+    return longest;
+  }
+
+  function updateStats(animate) {
+    const record = calcLongestStreak();
+    const total = doneDays.size;
+    const now = new Date();
+    const monthPrefix = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    let monthCount = 0;
+    doneDays.forEach(d => { if (d.startsWith(monthPrefix)) monthCount++; });
+
+    document.getElementById('statRecord').textContent = record;
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statMonth').textContent = monthCount;
+
+    const currentStreak = calcStreak();
+    const tileRecord = document.getElementById('tileRecord');
+    const trophy = document.getElementById('recordTrophy');
+    const isLive = record > 0 && currentStreak === record;
+    tileRecord.classList.toggle('record-live', isLive);
+    trophy.textContent = isLive ? '🏆' : '';
+
+    if (animate) {
+      ['tileRecord','tileTotal','tileMonth'].forEach(id => {
+        const el = document.getElementById(id);
+        el.classList.remove('bump');
+        void el.offsetWidth;
+        el.classList.add('bump');
+        setTimeout(() => el.classList.remove('bump'), 250);
+      });
+    }
+  }
+
+  /* XP / LEVEL */
+  const XP_PER_DAY = 10;
+  const XP_PER_LEVEL = 50;
+  function calcXP() { return doneDays.size * XP_PER_DAY; }
+  function calcLevel(xp) { return Math.floor(xp / XP_PER_LEVEL) + 1; }
+
+  function updateXP(animate) {
+    const xp = calcXP();
+    const level = calcLevel(xp);
+    const xpIntoLevel = xp % XP_PER_LEVEL;
+    const percent = (xpIntoLevel / XP_PER_LEVEL) * 100;
+    document.getElementById('levelText').textContent = `Poziom ${level}`;
+    document.getElementById('xpText').textContent = `${xpIntoLevel}/${XP_PER_LEVEL} XP`;
+    const fill = document.getElementById('xpBarFill');
+    fill.style.width = percent + '%';
+    if (animate) {
+      fill.style.transition = 'none';
+      void fill.offsetWidth;
+      fill.style.transition = '';
+    }
+    return level;
+  }
+
+  /* WEEK PROGRESS */
+  function mondayOf(d) {
+    const c = new Date(d);
+    const wd = c.getDay();
+    const diff = wd === 0 ? -6 : (1 - wd);
+    c.setDate(c.getDate() + diff);
+    c.setHours(0, 0, 0, 0);
+    return c;
+  }
+  function getCurrentWeekDates() {
+    const mon = mondayOf(new Date());
+    const arr = [];
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(mon);
+      d.setDate(mon.getDate() + i);
+      arr.push(d);
+    }
+    return arr;
+  }
+  function calcWeekDoneCount() {
+    return getCurrentWeekDates().filter(d => doneDays.has(fmt(d))).length;
+  }
+  function updateWeekProgress() {
+    const weekDates = getCurrentWeekDates();
+    const today = todayStr();
+    document.getElementById('weekCountText').textContent = `${calcWeekDoneCount()}/5`;
+    const wrap = document.getElementById('weekSegments');
+    wrap.innerHTML = '';
+    weekDates.forEach(d => {
+      const seg = document.createElement('div');
+      seg.className = 'week-segment';
+      const ds = fmt(d);
+      if (doneDays.has(ds)) seg.classList.add('filled');
+      if (ds === today) seg.classList.add('is-today');
+      wrap.appendChild(seg);
+    });
+  }
+
+  /* BADGES */
+  function calcPerfectWeeks() {
+    const weekMondays = new Set();
+    doneDays.forEach(d => weekMondays.add(fmt(mondayOf(new Date(d)))));
+    let count = 0;
+    weekMondays.forEach(monStr => {
+      const mon = new Date(monStr);
+      let all = true;
+      for (let i = 0; i < 5; i++) {
+        const day = new Date(mon);
+        day.setDate(mon.getDate() + i);
+        if (!doneDays.has(fmt(day))) { all = false; break; }
+      }
+      if (all) count++;
+    });
+    return count;
+  }
+
+  const badgeDefs = [
+    { id: 'first', icon: '🌱', name: 'Pierwszy krok', check: s => s.total >= 1 },
+    { id: 'week', icon: '⭐', name: 'Perfekcyjny tydzień', check: s => s.perfectWeeks >= 1 },
+    { id: 'iron', icon: '🛡️', name: 'Żelazna wola', check: s => s.record >= 15 },
+    { id: 'marathon', icon: '🏅', name: 'Maratończyk', check: s => s.total >= 50 },
+    { id: 'unstoppable', icon: '🚀', name: 'Nie do zatrzymania', check: s => s.record >= 30 },
+    { id: 'century', icon: '💯', name: 'Setka', check: s => s.total >= 100 },
+    { id: 'legend', icon: '👑', name: 'Legenda', check: s => s.record >= 100 },
+  ];
+
+  function computeBadgeStats() {
+    return { total: doneDays.size, record: calcLongestStreak(), perfectWeeks: calcPerfectWeeks() };
+  }
+  function getUnlockedBadgeIds() {
+    const stats = computeBadgeStats();
+    return new Set(badgeDefs.filter(b => b.check(stats)).map(b => b.id));
+  }
+  function renderBadges(justUnlockedId) {
+    const unlocked = getUnlockedBadgeIds();
+    const grid = document.getElementById('badgesGrid');
+    grid.innerHTML = '';
+    badgeDefs.forEach(b => {
+      const isUnlocked = unlocked.has(b.id);
+      const tile = document.createElement('div');
+      tile.className = 'badge-tile' + (isUnlocked ? ' unlocked' : '') + (b.id === justUnlockedId ? ' just-unlocked' : '');
+      tile.innerHTML = `<div class="badge-icon">${isUnlocked ? b.icon : '🔒'}</div><div class="badge-name">${b.name}</div>`;
+      grid.appendChild(tile);
+    });
+  }
+
+  function render() {
+    monthLabel.textContent = `${monthNames[viewDate.getMonth()]} ${viewDate.getFullYear()}`;
+    daysGrid.innerHTML = '';
+
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    // Monday-first offset
+    let startOffset = firstDay.getDay() - 1;
+    if (startOffset < 0) startOffset = 6;
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = todayStr();
+
+    for (let i = 0; i < startOffset; i++) {
+      const empty = document.createElement('div');
+      empty.className = 'day empty';
+      daysGrid.appendChild(empty);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateObj = new Date(year, month, d);
+      const dateStr = fmt(dateObj);
+      const btn = document.createElement('button');
+      btn.className = 'day';
+      btn.textContent = d;
+      const wd = dateObj.getDay();
+      const weekend = wd === 0 || wd === 6;
+      if (weekend) {
+        btn.classList.add('weekend');
+      } else {
+        if (dateStr > today) btn.classList.add('future');
+        if (dateStr === today) btn.classList.add('today');
+        if (doneDays.has(dateStr)) btn.classList.add('done');
+        btn.addEventListener('click', (e) => onDayClick(dateStr, btn, e));
+      }
+      daysGrid.appendChild(btn);
+    }
+
+    updateStreakDisplay(false);
+    updateStats(false);
+    updateXP(false);
+    updateWeekProgress();
+    renderBadges();
+  }
+
+  function spawnParticles(x, y) {
+    const colors = ['#FF6B35', '#FFC145', '#FF3D6E'];
+    for (let i = 0; i < 14; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.background = colors[i % colors.length];
+      p.style.left = x + 'px';
+      p.style.top = y + 'px';
+      document.body.appendChild(p);
+      const angle = (Math.PI * 2 * i) / 14;
+      const dist = 40 + Math.random() * 40;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist;
+      p.animate([
+        { transform: 'translate(0,0) scale(1)', opacity: 1 },
+        { transform: `translate(${dx}px, ${dy}px) scale(0)`, opacity: 0 }
+      ], { duration: 500 + Math.random()*200, easing: 'cubic-bezier(.2,.8,.3,1)' });
+      setTimeout(() => p.remove(), 800);
+    }
+  }
+
+  function spawnConfetti() {
+    const colors = ['#FF6B35', '#FFC145', '#FF3D6E', '#F5F1E8'];
+    for (let i = 0; i < 60; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random() * 100 + 'vw';
+      c.style.background = colors[i % colors.length];
+      c.style.animation = `fall ${1.6 + Math.random()*1.2}s ease-in forwards`;
+      c.style.animationDelay = (Math.random() * 0.4) + 's';
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3200);
+    }
+  }
+
+  function playChime() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const notes = [660, 880];
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + i*0.09 + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i*0.09 + 0.3);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(ctx.currentTime + i*0.09);
+        osc.stop(ctx.currentTime + i*0.09 + 0.32);
+      });
+    } catch (e) { /* audio not available */ }
+  }
+
+  let celebrationQueue = [];
+  let celebrationBusy = false;
+  function queueCelebration(innerHtml, opts) {
+    celebrationQueue.push({ innerHtml, opts: opts || {} });
+    processCelebrationQueue();
+  }
+  function processCelebrationQueue() {
+    if (celebrationBusy || celebrationQueue.length === 0) return;
+    celebrationBusy = true;
+    const { innerHtml, opts } = celebrationQueue.shift();
+    const overlay = document.createElement('div');
+    overlay.className = 'celebration-overlay show';
+    overlay.innerHTML = innerHtml;
+    document.body.appendChild(overlay);
+    if (opts.confetti !== false) spawnConfetti();
+    setTimeout(() => {
+      overlay.remove();
+      celebrationBusy = false;
+      processCelebrationQueue();
+    }, 1600);
+  }
+
+  function maybeShowCelebration(streak) {
+    if (streak === 0 || streak % 5 !== 0) return;
+    queueCelebration(`<div class="celebration-text">${streak} dni z rzędu 🔥</div>`);
+  }
+
+  function showLevelUp(level) {
+    queueCelebration(`<div class="celebration-text">Poziom ${level}! ⚡</div>`);
+  }
+
+  function showPerfectWeek() {
+    queueCelebration(`<div class="celebration-text">Perfekcyjny tydzień! ⭐</div>`);
+  }
+
+  function showBadgeUnlock(def) {
+    queueCelebration(`<div class="celebration-text multiline">Nowa odznaka<br>${def.icon} ${def.name}</div>`);
+  }
+
+  function onDayClick(dateStr, btn, e) {
+    if (btn.classList.contains('future') || btn.classList.contains('empty')) return;
+    const rect = btn.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    const prevLevel = calcLevel(calcXP());
+    const prevWeekCount = calcWeekDoneCount();
+    const prevBadges = getUnlockedBadgeIds();
+    const isNowDone = !doneDays.has(dateStr);
+
+    if (doneDays.has(dateStr)) {
+      doneDays.delete(dateStr);
+      btn.classList.remove('done', 'just-set');
+    } else {
+      doneDays.add(dateStr);
+      btn.classList.add('done', 'just-set');
+      spawnParticles(cx, cy);
+      playChime();
+      setTimeout(() => btn.classList.remove('just-set'), 450);
+    }
+    save();
+
+    const streak = updateStreakDisplay(true);
+    updateStats(true);
+    const newLevel = updateXP(true);
+    updateWeekProgress();
+
+    const newWeekCount = calcWeekDoneCount();
+    const newBadges = getUnlockedBadgeIds();
+    let newBadgeId = null;
+    newBadges.forEach(id => { if (!prevBadges.has(id)) newBadgeId = id; });
+    renderBadges(newBadgeId);
+
+    if (isNowDone) {
+      maybeShowCelebration(streak);
+      if (newLevel > prevLevel) showLevelUp(newLevel);
+      if (prevWeekCount < 5 && newWeekCount === 5) showPerfectWeek();
+      if (newBadgeId) showBadgeUnlock(badgeDefs.find(b => b.id === newBadgeId));
+    }
+  }
+
+  document.getElementById('prevMonth').addEventListener('click', () => {
+    viewDate.setMonth(viewDate.getMonth() - 1);
+    render();
+  });
+  document.getElementById('nextMonth').addEventListener('click', () => {
+    viewDate.setMonth(viewDate.getMonth() + 1);
+    render();
+  });
+  document.getElementById('resetBtn').addEventListener('click', async () => {
+    if (!confirm('Na pewno wyczyścić całą historię?')) return;
+    doneDays.clear();
+    await save();
+    render();
+  });
+
+  load();
+})();
+</script>
+
+</body>
+</html>
